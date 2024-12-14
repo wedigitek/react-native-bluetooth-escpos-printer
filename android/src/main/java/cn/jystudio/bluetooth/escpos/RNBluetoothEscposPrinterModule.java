@@ -316,7 +316,7 @@ public class RNBluetoothEscposPrinterModule extends ReactContextBaseJavaModule
     }
 
     @ReactMethod
-    public void printPic(String base64encodeStr, @Nullable  ReadableMap options) {
+    public void printPic(String base64encodeStr, @Nullable ReadableMap options, Boolean cutPaper) {
         int width = 0;
         int leftPadding = 0;
         if(options!=null){
@@ -346,12 +346,18 @@ public class RNBluetoothEscposPrinterModule extends ReactContextBaseJavaModule
             sendDataByte(Command.LF);
             sendDataByte(data);
             sendDataByte(PrinterCommand.POS_Set_PrtAndFeedPaper(30));
-            sendDataByte(PrinterCommand.POS_Set_Cut(1));
+            if (cutPaper) {
+                sendDataByte(PrinterCommand.POS_Set_Cut(1));
+            }
             sendDataByte(PrinterCommand.POS_Set_PrtInit());
         }
     }
 
-
+    @ReactMethod
+    public void cutPaper() {
+        sendDataByte(PrinterCommand.POS_Set_Cut(1));
+    }
+                
     @ReactMethod
     public void selfTest(@Nullable Callback cb) {
         boolean result = sendDataByte(PrinterCommand.POS_Set_PrtSelfTest());
@@ -385,7 +391,7 @@ public class RNBluetoothEscposPrinterModule extends ReactContextBaseJavaModule
     @ReactMethod
     public void printQRCode(String content, int size, int correctionLevel, final Promise promise) {
         try {
-            Log.i(TAG, "生成的文本：" + content);
+            Log.i(TAG, "Generated Content：" + content);
             // 把输入的文本转为二维码
             Hashtable<EncodeHintType, Object> hints = new Hashtable<EncodeHintType, Object>();
             hints.put(EncodeHintType.CHARACTER_SET, "utf-8");
@@ -396,27 +402,20 @@ public class RNBluetoothEscposPrinterModule extends ReactContextBaseJavaModule
             int width = bitMatrix.getWidth();
             int height = bitMatrix.getHeight();
 
-            System.out.println("w:" + width + "h:"
-                    + height);
-
+            
             int[] pixels = new int[width * height];
             for (int y = 0; y < height; y++) {
                 for (int x = 0; x < width; x++) {
-                    if (bitMatrix.get(x, y)) {
-                        pixels[y * width + x] = 0xff000000;
-                    } else {
-                        pixels[y * width + x] = 0xffffffff;
-                    }
+                    pixels[y * width + x] = bitMatrix.get(x, y) ? 0xff000000 : 0xffffffff;
                 }
             }
 
-            Bitmap bitmap = Bitmap.createBitmap(width, height,
-                    Bitmap.Config.ARGB_8888);
+            Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
 
             bitmap.setPixels(pixels, 0, width, 0, 0, width, height);
 
             //TODO: may need a left padding to align center.
-            byte[] data = PrintPicture.POS_PrintBMP(bitmap, size, 0, 0);
+            byte[] data = PrintPicture.POS_PrintBMP(bitmap, size, 0, 130); // Adjusted for left padding
             if (sendDataByte(data)) {
                 promise.resolve(null);
             } else {
