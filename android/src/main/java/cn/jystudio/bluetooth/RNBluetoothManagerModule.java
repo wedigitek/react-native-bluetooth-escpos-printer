@@ -10,8 +10,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -212,12 +212,20 @@ public class RNBluetoothManagerModule extends ReactContextBaseJavaModule
 
     @ReactMethod
     public void connect(String address, final Promise promise) {
+	Log.d("BluetoothConnect", "Connect initialized");
         BluetoothAdapter adapter = this.getBluetoothAdapter();
         if (adapter!=null && adapter.isEnabled()) {
             BluetoothDevice device = adapter.getRemoteDevice(address);
             promiseMap.put(PROMISE_CONNECT, promise);
-            mService.connect(device);
+            if (mService != null) {
+		Log.d("BluetoothConnect", "Connected");
+	        mService.connect(device);
+	    } else {
+		Log.d("BluetoothConnect", "Bluetooth service is not initialized");
+	    	promise.reject("Bluetooth service is not initialized");
+	    }
         } else {
+	    Log.d("BluetoothConnect", "Bluetooth ");
             promise.reject("BT NOT ENABLED");
         }
 
